@@ -1,0 +1,72 @@
+@import com.fasterxml.jackson.databind.JsonNode
+
+@(query: String, items: Seq[JsonNode], prev: Int, next: Int)
+
+@main("Search for repos") {
+
+    <h2>Repository search</h2>
+    
+    
+    <div class="row">
+    
+    <form action="@routes.Repos.list()" method="GET">
+	  
+      <div class="col-lg-3"></div>
+	  <div class="col-lg-6">
+	    <div class="input-group">
+	      <input type="text" name="query" class="form-control" autofocus="" value="@query">
+	      <span class="input-group-btn">
+	        <button class="btn btn-default" type="submit">Go!</button>
+	      </span>
+	    </div><!-- /input-group -->
+      </div><!-- /.col-lg-6 -->
+      <div class="col-lg-3"></div>
+      
+      </form>
+      
+      </div>
+      
+      @if(!items.isEmpty()) {
+      <div class="row">
+      Your query : @query<br>@prev @next
+      
+      <ul class="pager">
+          <form action="@routes.Repos.list()" method="GET">
+          @if(prev == -1) {
+      	      <li class="previous disabled">
+      	  } else {
+      	      <li class="previous">
+      	  }
+          <span><button disabled>&larr; Previous</button></span>
+          <input type="hidden" name="query" value="@query" />
+          <input type="hidden" name="page" value="@prev" />
+          </li>
+          </form>
+          
+          <form action="@routes.Repos.list()" method="GET">
+          @if(next == -1) {
+              <li class="next disabled">
+          } else {
+              <li class="next">
+          }
+          <a href="#"><button>Next &rarr;</button></a></li>
+          <input type="hidden" name="query" value="@query" />
+          <input type="hidden" name="page" value="@next" />
+          </form>
+          
+        </ul>
+        
+        <div class="list-group">
+        
+        	@for(entry <- items) {
+		      	<a href="@routes.Repos.viewFull(entry.get("full_name").asText())" class="list-group-item"><span class="glyphicon glyphicon-star">@entry.get("stargazers_count")</span>
+		      		<strong>@entry.get("name").asText()</strong>&nbsp;(@entry.get("full_name").asText())
+		      	</a>
+		    }
+        </div>
+        
+      </div>
+      
+      }
+
+}

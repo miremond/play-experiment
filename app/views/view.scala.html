@@ -1,0 +1,23 @@
+@import com.fasterxml.jackson.databind.JsonNode
+
+@(name: String, logins: Seq[String])
+
+@main("View repository") {
+
+    <h2>View Repository @name</h2>
+    
+    <h3>Commiters</h3>
+    
+    <div class="row">
+        <div class="list-group">
+        
+        	@for(login <- logins) {
+		      	<a href="#" class="list-group-item">
+		      		<strong>@login</strong>
+		      	</a>
+		    }
+        </div>
+        
+      </div>
+      
+}
