@@ -1,11 +1,19 @@
 @import com.fasterxml.jackson.databind.JsonNode
 
-@(query: String, items: Seq[JsonNode], prev: Int, next: Int)
+@(query: String, error: String, items: Seq[JsonNode], prev: Int, next: Int)
 
 @main("Search for repos") {
 
     <h2>Repository search</h2>
     
+    @if(error != null) {
+    <div class="row">
+    <div class="alert alert-warning alert-dismissible" role="alert">
+  <button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+  <strong>Warning!</strong> @error
+</div>
+    </div>
+    }
     
     <div class="row">
     
@@ -31,29 +39,25 @@
       Your query : @query<br>@prev @next
       
       <ul class="pager">
-          <form action="@routes.Repos.list()" method="GET">
           @if(prev == -1) {
-      	      <li class="previous disabled">
-      	  } else {
-      	      <li class="previous">
-      	  }
-          <span><button disabled>&larr; Previous</button></span>
-          <input type="hidden" name="query" value="@query" />
-          <input type="hidden" name="page" value="@prev" />
-          </li>
-          </form>
+              <li class="previous disabled">
+              <a href="#">&larr; Previous</a></li>
+          } else {
+              <li class="previous">
+	          @defining(routes.Repos.list() + "?query=" + query + "&page=" + prev) { prevUrl =>
+	          <a href="@prevUrl">&larr; Previous</a></li>
+              }
+          }
           
-          <form action="@routes.Repos.list()" method="GET">
           @if(next == -1) {
               <li class="next disabled">
+              <a href="#">Next &rarr;</a></li>
           } else {
               <li class="next">
+	          @defining(routes.Repos.list() + "?query=" + query + "&page=" + next) { nextUrl =>
+	          <a href="@nextUrl">Next &rarr;</a></li>
+          	  }
           }
-          <a href="#"><button>Next &rarr;</button></a></li>
-          <input type="hidden" name="query" value="@query" />
-          <input type="hidden" name="page" value="@next" />
-          </form>
-          
         </ul>
         
         <div class="list-group">

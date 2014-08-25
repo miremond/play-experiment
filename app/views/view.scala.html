@@ -1,6 +1,6 @@
 @import com.fasterxml.jackson.databind.JsonNode
 
-@(name: String, logins: Seq[String])
+@(name: String, logins: Map[String, Integer])
 
 @main("View repository") {
 
@@ -9,14 +9,15 @@
     <h3>Commiters</h3>
     
     <div class="row">
-        <div class="list-group">
         
-        	@for(login <- logins) {
-		      	<a href="#" class="list-group-item">
-		      		<strong>@login</strong>
-		      	</a>
-		    }
-        </div>
+        <ul class="list-group">
+			@for(login <- logins) {
+				<li class="list-group-item">
+		    		<span class="badge">@login._2</span>
+		    		<strong>@login._1</strong>
+		  		</li>
+		  	}
+		</ul>
         
       </div>
       
