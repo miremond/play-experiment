@@ -7,8 +7,3 @@ h2 {
 .list-group-item .glyphicon {
 	float: right;
 }
-.pager button {
-	background:none!important;
-    border:none; 
-    padding:0!important;
-}

@@ -1,13 +1,18 @@
 @import com.fasterxml.jackson.databind.JsonNode
 
-@(name: String, logins: Map[String, Integer])
+@(name: String, logins: Map[String, Integer], dates: JsonNode)
 
 @main("View repository") {
 
     <h2>View Repository @name</h2>
     
-    <h3>Commiters</h3>
+    <h3>Timeline on 100 last commits</h3>
     
+    <div class="row">
+    <div id="timeline1" style="width:500px;height: 200px;"></div>
+    </div>
+    
+    <h3>Commiters</h3>
     <div class="row">
         
         <ul class="list-group">
@@ -20,5 +25,24 @@
 		</ul>
         
       </div>
+      
+    <script src="@routes.Assets.at("javascripts/raphael-min.js")" type="text/javascript"></script>
+	<script src="@routes.Assets.at("javascripts/timeline-min.js")" type="text/javascript"></script>
+      <script type="text/javascript">
+	
+		var p1 = Raphael('timeline1', 1000, 200);
+		var items = @Html(dates.toString());
+					
+		p1.timeline.draw({events: items, color:'#f0f'}, function(item) {
+			//alert(item.name);
+		});
+		
+	  </script>
+      
+      
+      
+      
+      
+      
       
 }

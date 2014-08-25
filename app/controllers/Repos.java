@@ -1,6 +1,7 @@
 package controllers;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,10 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.JsonParser.NumberType;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import play.*;
 import play.mvc.*;
@@ -94,8 +98,9 @@ public class Repos extends Controller {
 
         WSRequestHolder holderLogins = WS.url(GITHUB_BASE_URL + "/repos/" + fullname + "/contributors");
         holderLogins.setAuth(GITHUB_USER, GITHUB_PASSWORD, WSAuthScheme.BASIC).setTimeout(1000);
-        WSRequestHolder holderCommits = WS.url(GITHUB_BASE_URL + "/repos/" + fullname + "/commits");
-        holderLogins.setAuth(GITHUB_USER, GITHUB_PASSWORD, WSAuthScheme.BASIC).setTimeout(1000)
+        WSRequestHolder holderCommits = WS.url(GITHUB_BASE_URL + "/repos/" + fullname + "/commits")
+        		.setAuth(GITHUB_USER, GITHUB_PASSWORD, WSAuthScheme.BASIC)
+        		.setTimeout(5000)
                 .setQueryParameter("per_page", "100");
 
         Promise<WSResponse> pLogins = holderLogins.get();
@@ -105,7 +110,14 @@ public class Repos extends Controller {
 
         Promise<Result> response = all.map(list -> {
             Map<String, Integer> stats = new HashMap<>();
-
+            
+//            WSResponse r = list.get(1);
+//            List<String> link = r.getAllHeaders().get("Link");
+//            Logger.info("Link: " + link);
+//
+//            Logger.info("Print Login {}", list.get(0).asJson());
+//            Logger.info("Print Commit {}", list.get(1).asJson());
+            
             JsonNode jsonLogins = list.get(0).asJson();
             Iterator<JsonNode> it = jsonLogins.elements();
             while (it.hasNext()) {
@@ -115,9 +127,31 @@ public class Repos extends Controller {
             JsonNode commitsLogins = list.get(1).asJson();
             Iterator<JsonNode> itCommits = commitsLogins.elements();
             int nb = 0;
+            ArrayNode arrayNode = JsonNodeFactory.instance.arrayNode();
             while (itCommits.hasNext()) {
                 nb++;
                 JsonNode next = itCommits.next();
+                
+                JsonNode commit = next.get("commit");
+                if (commit != null) {
+                	JsonNode author = commit.get("author");
+                	if (author != null) {
+                		JsonNode date = author.get("date");
+                		if (date != null) {
+                			String textDate = date.asText().split("T")[0];
+                			String textMsg = "";
+                			JsonNode message = commit.get("message");
+                			if (message != null) {
+                				textMsg = message.asText();
+                			}
+                			ObjectNode o = JsonNodeFactory.instance.objectNode();
+                			o.put("name", textMsg).put("date", textDate);
+                			arrayNode.add(o);
+                		}
+                	}
+                }
+                
+                
                 JsonNode author = next.get("author");
                 if (author != null) {
                     JsonNode login = author.get("login");
@@ -133,12 +167,13 @@ public class Repos extends Controller {
                     Logger.info("Next Author {}", next);
                 }
             }
-            Logger.info("Nb commits {}", nb);
+            Logger.info("Nb commits {} {}", nb, arrayNode.toString());
 
-            return ok(view.render(fullname, stats));
+            return ok(view.render(fullname, stats, arrayNode));
         });
 
         return response;
+        
     }
 
     public static Content index() {
