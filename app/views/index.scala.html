@@ -2,16 +2,16 @@
 
 @(query: String, error: String, items: Seq[Map[String, Object]], prev: Int, next: Int)
 
-@main("Search for repos") {
+@main("Search for repository") {
 
     <h2>Repository search</h2>
     
     @if(error != null) {
     <div class="row">
-    <div class="alert alert-warning alert-dismissible" role="alert">
-  <button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-  <strong>Warning!</strong> @error
-</div>
+	    <div class="alert alert-warning alert-dismissible" role="alert">
+		    <button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+		    <strong>Warning!</strong> @error
+		</div>
     </div>
     }
     
@@ -36,7 +36,7 @@
       
       @if(!items.isEmpty()) {
       <div class="row">
-      Your query : @query<br>
+      <strong>Your query : @query</strong><br>
       
       <ul class="pager">
           @if(prev == -1) {
@@ -63,7 +63,7 @@
         <div class="list-group">
         
         	@for(entry <- items) {
-		      	<a href="@routes.Repos.viewFull(entry.get("full_name").toString)" class="list-group-item">
+		      	<a href="@routes.Repos.view(entry.get("full_name").toString)" class="list-group-item">
 		      		<span class="glyphicon glyphicon-star">@entry.get("stargazers_count")</span>
 		      		<strong>@entry.get("name")</strong>&nbsp;(@entry.get("full_name"))
 		      	</a>

@@ -5,8 +5,8 @@
 # Home page
 GET     /                           controllers.Application.index()
 GET     /repos                      controllers.Repos.list(query ?= "", page: Int ?= 1)
-GET     /repos/*fullname            controllers.Repos.viewFull(fullname)
-#GET     /repos/:owner/:name         controllers.Repos.view(owner, name)
+GET     /repos/                     controllers.Repos.list(query ?= "", page: Int ?= 1)
+GET     /repos/*fullname            controllers.Repos.view(fullname)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
