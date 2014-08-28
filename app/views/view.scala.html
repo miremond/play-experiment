@@ -1,10 +1,20 @@
 @import com.fasterxml.jackson.databind.JsonNode
+@import java.util.Map.Entry
 
-@(name: String, logins: Map[String, Integer], dates: JsonNode)
+@(error: String, name: String, logins: Seq[Entry[String, Integer]], dates: JsonNode)
 
 @main("View repository") {
 
     <h2>View Repository @name</h2>
+    
+    @if(error != null) {
+    <div class="row">
+	    <div class="alert alert-warning alert-dismissible" role="alert">
+	  		<button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+	  		<strong>Warning!</strong> @error
+		</div>
+    </div>
+    }
     
     <h3>Timeline on 100 last commits</h3>
     
@@ -18,8 +28,8 @@
         <ul class="list-group">
 			@for(login <- logins) {
 				<li class="list-group-item">
-		    		<span class="badge">@login._2</span>
-		    		<strong>@login._1</strong>
+		    		<span class="badge">@login.getValue()</span>
+		    		<strong>@login.getKey()</strong>
 		  		</li>
 		  	}
 		</ul>

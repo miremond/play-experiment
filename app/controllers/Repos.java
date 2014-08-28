@@ -2,10 +2,12 @@ package controllers;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -31,6 +33,7 @@ import static play.libs.Scala.emptySeq;
 import static play.libs.Scala.toSeq;
 import static play.libs.Scala.asScala;
 import scala.collection.JavaConverters;
+import play.libs.Json;
 import play.Logger;
 
 public class Repos extends Controller {
@@ -50,16 +53,14 @@ public class Repos extends Controller {
         }
         int page = (p < 1) ? 1 : p;
 
-        WSRequestHolder holder = WS.url(GITHUB_BASE_URL + "/search/repositories");
-        holder.setAuth(GITHUB_USER, GITHUB_PASSWORD, WSAuthScheme.BASIC).setTimeout(1000).setQueryParameter("q", query)
-                .setQueryParameter("per_page", PAGE_SIZE);
-        holder.setQueryParameter("page", Integer.toString(page));
+        WSRequestHolder holder = authUrl("/search/repositories").setQueryParameter("q", query)
+                .setQueryParameter("per_page", PAGE_SIZE).setQueryParameter("page", Integer.toString(page));
 
         Promise<Result> response = holder.get().map(
                 r -> {
-                    Logger.info("response {}" + r);
+                    validateResponse(r);
+
                     List<String> link = r.getAllHeaders().get("Link");
-                    Logger.info("Link: " + link);
                     int next = 1, prev = -1;
                     if (link != null && !link.isEmpty()) {
                         String l = link.get(0);
@@ -67,10 +68,19 @@ public class Repos extends Controller {
                         prev = (l.contains("rel=\"prev\"")) ? page - 1 : -1;
                     }
                     JsonNode json = r.asJson();
+                    List<Map<String, Object>> items = new ArrayList<>();
                     if (json != null && json.get("items") != null) {
-                        scala.collection.immutable.List<JsonNode> items = JavaConverters
-                                .asScalaIteratorConverter(json.get("items").elements()).asScala().toList();
-                        return ok(index.render(query, null, items, prev, next));
+                        Iterator<JsonNode> it = json.get("items").elements();
+                        while (it.hasNext()) {
+                            JsonNode i = (JsonNode) it.next();
+                            Map<String, Object> item = new HashMap<>();
+                            item.put("name", i.get("name").asText());
+                            item.put("full_name", i.get("full_name").asText());
+                            item.put("stargazers_count", i.get("stargazers_count").asInt());
+                            items.add(item);
+                        }
+
+                        return ok(index.render(query, null, toSeq(items), prev, next));
                     } else {
                         throw error(r);
                     }
@@ -78,11 +88,16 @@ public class Repos extends Controller {
                 });
 
         Promise<Result> recovered = response.recover(throwable -> {
-            Logger.info("Error {}", throwable);
             return ok(index(throwable.getMessage()));
         });
 
         return recovered;
+    }
+
+    private static void validateResponse(WSResponse r) throws Exception {
+        if (r.getStatus() != Http.Status.OK) {
+            throw error(r);
+        }
     }
 
     private static Exception error(WSResponse r) {
@@ -96,12 +111,9 @@ public class Repos extends Controller {
     @SuppressWarnings("unchecked")
     public static Promise<Result> viewFull(String fullname) {
 
-        WSRequestHolder holderLogins = WS.url(GITHUB_BASE_URL + "/repos/" + fullname + "/contributors");
-        holderLogins.setAuth(GITHUB_USER, GITHUB_PASSWORD, WSAuthScheme.BASIC).setTimeout(1000);
-        WSRequestHolder holderCommits = WS.url(GITHUB_BASE_URL + "/repos/" + fullname + "/commits")
-        		.setAuth(GITHUB_USER, GITHUB_PASSWORD, WSAuthScheme.BASIC)
-        		.setTimeout(5000)
-                .setQueryParameter("per_page", "100");
+        WSRequestHolder holderLogins = authUrl("/repos/" + fullname + "/contributors");
+        WSRequestHolder holderCommits = authUrl("/repos/" + fullname + "/commits").setTimeout(5000).setQueryParameter(
+                "per_page", "100");
 
         Promise<WSResponse> pLogins = holderLogins.get();
         Promise<WSResponse> pCommits = holderCommits.get();
@@ -110,70 +122,69 @@ public class Repos extends Controller {
 
         Promise<Result> response = all.map(list -> {
             Map<String, Integer> stats = new HashMap<>();
-            
-//            WSResponse r = list.get(1);
-//            List<String> link = r.getAllHeaders().get("Link");
-//            Logger.info("Link: " + link);
-//
-//            Logger.info("Print Login {}", list.get(0).asJson());
-//            Logger.info("Print Commit {}", list.get(1).asJson());
-            
+
+            validateResponse(list.get(0));
+
             JsonNode jsonLogins = list.get(0).asJson();
             Iterator<JsonNode> it = jsonLogins.elements();
             while (it.hasNext()) {
                 stats.put(it.next().get("login").asText(), 0);
             }
 
+            validateResponse(list.get(1));
+
             JsonNode commitsLogins = list.get(1).asJson();
             Iterator<JsonNode> itCommits = commitsLogins.elements();
-            int nb = 0;
             ArrayNode arrayNode = JsonNodeFactory.instance.arrayNode();
             while (itCommits.hasNext()) {
-                nb++;
                 JsonNode next = itCommits.next();
-                
+
                 JsonNode commit = next.get("commit");
                 if (commit != null) {
-                	JsonNode author = commit.get("author");
-                	if (author != null) {
-                		JsonNode date = author.get("date");
-                		if (date != null) {
-                			String textDate = date.asText().split("T")[0];
-                			String textMsg = "";
-                			JsonNode message = commit.get("message");
-                			if (message != null) {
-                				textMsg = message.asText();
-                			}
-                			ObjectNode o = JsonNodeFactory.instance.objectNode();
-                			o.put("name", textMsg).put("date", textDate);
-                			arrayNode.add(o);
-                		}
-                	}
+                    JsonNode author = commit.get("author");
+                    if (author != null) {
+                        JsonNode date = author.get("date");
+                        if (date != null) {
+                            String textDate = date.asText().split("T")[0];
+                            String textMsg = "";
+                            JsonNode message = commit.get("message");
+                            if (message != null) {
+                                textMsg = message.asText();
+                            }
+                            ObjectNode o = JsonNodeFactory.instance.objectNode();
+                            o.put("name", textMsg).put("date", textDate);
+                            arrayNode.add(o);
+                        }
+                    }
                 }
-                
-                
+
                 JsonNode author = next.get("author");
                 if (author != null) {
                     JsonNode login = author.get("login");
                     if (login != null) {
-                        if (!stats.containsKey(login.asText())) {
-                            Logger.info("Login {} not found", login.asText());
-                        }
                         stats.merge(login.asText(), 0, (o, n) -> o + 1);
-                    } else {
-                        Logger.info("Next Login {}", next);
                     }
-                } else {
-                    Logger.info("Next Author {}", next);
                 }
             }
-            Logger.info("Nb commits {} {}", nb, arrayNode.toString());
 
-            return ok(view.render(fullname, stats, arrayNode));
+            List<Entry<String, Integer>> statsList = new ArrayList<>(stats.entrySet());
+            Collections.sort(statsList, (u1, u2) -> u1.getValue().compareTo(u2.getValue()));
+            Collections.reverse(statsList);
+
+            return ok(view.render(null, fullname, toSeq(statsList), arrayNode));
         });
 
-        return response;
-        
+        Promise<Result> recovered = response.recover(throwable -> {
+            return ok(view.render(throwable.getMessage(), fullname, emptySeq(), JsonNodeFactory.instance.arrayNode()));
+        });
+
+        return recovered;
+
+    }
+
+    private static WSRequestHolder authUrl(String path) {
+        return WS.url(GITHUB_BASE_URL + path).setAuth(GITHUB_USER, GITHUB_PASSWORD, WSAuthScheme.BASIC)
+                .setTimeout(1000);
     }
 
     public static Content index() {

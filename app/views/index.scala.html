@@ -1,6 +1,6 @@
 @import com.fasterxml.jackson.databind.JsonNode
 
-@(query: String, error: String, items: Seq[JsonNode], prev: Int, next: Int)
+@(query: String, error: String, items: Seq[Map[String, Object]], prev: Int, next: Int)
 
 @main("Search for repos") {
 
@@ -36,7 +36,7 @@
       
       @if(!items.isEmpty()) {
       <div class="row">
-      Your query : @query<br>@prev @next
+      Your query : @query<br>
       
       <ul class="pager">
           @if(prev == -1) {
@@ -63,8 +63,9 @@
         <div class="list-group">
         
         	@for(entry <- items) {
-		      	<a href="@routes.Repos.viewFull(entry.get("full_name").asText())" class="list-group-item"><span class="glyphicon glyphicon-star">@entry.get("stargazers_count")</span>
-		      		<strong>@entry.get("name").asText()</strong>&nbsp;(@entry.get("full_name").asText())
+		      	<a href="@routes.Repos.viewFull(entry.get("full_name").toString)" class="list-group-item">
+		      		<span class="glyphicon glyphicon-star">@entry.get("stargazers_count")</span>
+		      		<strong>@entry.get("name")</strong>&nbsp;(@entry.get("full_name"))
 		      	</a>
 		    }
         </div>
